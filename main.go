@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,33 +13,25 @@ import (
 )
 
 type Progress struct {
-	Season  int
-	Episode int
+	Season  int `json:"season"`
+	Episode int `json:"episode"`
 }
 
 type Target struct {
-	Title      string
-	Uploaders  []string
-	latestSeen Progress
+	Title      string   `json:"title"`
+	Uploaders  []string `json:"uploaders"`
+	LatestSeen Progress `json:"latest_seen"`
 }
 
 var episodeRegex = regexp.MustCompile(`(?i)(?:S(\d{1,2}))?\s*(?:E|Episode|\s+-\s+)\s*(\d{2,3})`)
 
 func main() {
-	fp := gofeed.NewParser()
-
-	targets := []Target{
-		{
-			Title:      "rezero",
-			Uploaders:  []string{"ToonsHub", "FBI"},
-			latestSeen: Progress{Season: 4, Episode: 10},
-		},
-		{
-			Title:      "mushoku tensei",
-			Uploaders:  []string{"Feibanyama"},
-			latestSeen: Progress{Season: 3, Episode: 10},
-		},
+	targets, err := loadTargets("config.json")
+	if err != nil {
+		fmt.Println("Error loading config:", err)
+		return
 	}
+	fp := gofeed.NewParser()
 
 	for _, target := range targets {
 
@@ -58,7 +52,7 @@ func main() {
 			}
 
 			episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
-			isNewer := season > target.latestSeen.Season || (season == target.latestSeen.Season && episode > target.latestSeen.Episode)
+			isNewer := season > target.LatestSeen.Season || (season == target.LatestSeen.Season && episode > target.LatestSeen.Episode)
 
 			if isNewer {
 				fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
@@ -69,6 +63,21 @@ func main() {
 		}
 	}
 
+}
+
+func loadTargets(filename string) ([]Target, error) {
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var targets []Target
+
+	if err := json.Unmarshal(file, &targets); err != nil {
+		panic(err)
+	}
+
+	return targets, nil
 }
 
 func buildNyaaURL(animeTitle string, uploaders []string) string {
