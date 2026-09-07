@@ -34,35 +34,39 @@ func main() {
 	fp := gofeed.NewParser()
 
 	for _, target := range targets {
+		foundNewEpisode := false
 
-		rssURL := buildNyaaURL(target.Title, target.Uploaders)
-
-		feed, err := fp.ParseURL(rssURL)
-		if err != nil {
-			fmt.Println("Error fetching feed for", target.Title, ":", err)
-			continue
-		}
-
-		for _, item := range feed.Items {
-
-			season, episode, found := extractEpisode(item.Title)
-			if !found {
-				fmt.Println("[UNMATCHED]", item.Title)
+		for _, uploader := range target.Uploaders {
+			if foundNewEpisode {
+				break
+			}
+			rssURL := buildNyaaURL(target.Title, uploader)
+			feed, err := fp.ParseURL(rssURL)
+			if err != nil {
 				continue
 			}
 
-			episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
-			isNewer := season > target.LatestSeen.Season || (season == target.LatestSeen.Season && episode > target.LatestSeen.Episode)
+			for _, item := range feed.Items {
+				season, episode, found := extractEpisode(item.Title)
+				if !found {
+					continue
+				}
 
-			if isNewer {
-				fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
-				fmt.Println(item.Link)
-			} else {
-				fmt.Println("[SKIP]", episodeTag, item.Title)
+				episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
+				isNewer := season > target.LatestSeen.Season || (season == target.LatestSeen.Season && episode > target.LatestSeen.Episode)
+
+				if isNewer {
+					fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
+					fmt.Println(item.Link)
+
+					foundNewEpisode = true
+				} // else {
+				// 	fmt.Println("[SKIP]", episodeTag, item.Title)
+				// }
 			}
 		}
-	}
 
+	}
 }
 
 func loadTargets(filename string) ([]Target, error) {
@@ -80,17 +84,10 @@ func loadTargets(filename string) ([]Target, error) {
 	return targets, nil
 }
 
-func buildNyaaURL(animeTitle string, uploaders []string) string {
-	var queryParts []string
-
+func buildNyaaURL(animeTitle string, uploader string) string {
 	cleanTitle := strings.ReplaceAll(animeTitle, ":", "")
 
-	if len(uploaders) > 0 {
-		queryParts = append(queryParts, "("+strings.Join(uploaders, "|")+")")
-	}
-
-	queryParts = append(queryParts, cleanTitle)
-	searchQuery := strings.Join(queryParts, " ")
+	searchQuery := fmt.Sprintf("[%s] %s", uploader, cleanTitle)
 
 	baseURL := "https://nyaa.si/?page=rss&c=0_0&f=0&q="
 	return baseURL + url.QueryEscape(searchQuery)
