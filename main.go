@@ -33,40 +33,63 @@ func main() {
 	}
 	fp := gofeed.NewParser()
 
-	for _, target := range targets {
+	for i := range targets {
 		foundNewEpisode := false
 
-		for _, uploader := range target.Uploaders {
+		for _, uploader := range targets[i].Uploaders {
 			if foundNewEpisode {
 				break
 			}
-			rssURL := buildNyaaURL(target.Title, uploader)
+			rssURL := buildNyaaURL(targets[i].Title, uploader)
 			feed, err := fp.ParseURL(rssURL)
 			if err != nil {
 				continue
 			}
 
-			for _, item := range feed.Items {
-				season, episode, found := extractEpisode(item.Title)
-				if !found {
-					continue
+			for {
+				expectedSeason := targets[i].LatestSeen.Season
+				expectedEpisode := targets[i].LatestSeen.Episode + 1
+				foundThisPass := false
+
+				for _, item := range feed.Items {
+					season, episode, found := extractEpisode(item.Title)
+					if !found {
+						continue
+					}
+
+					if season == expectedSeason && episode == expectedEpisode {
+						episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
+						fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
+						fmt.Println(item.Link)
+						targets[i].LatestSeen.Season = season
+						targets[i].LatestSeen.Episode = episode
+						targets[i].saveProgress(targets)
+						fmt.Println(targets[i].LatestSeen)
+						foundNewEpisode = true
+						foundThisPass = true
+						break
+					}
+
 				}
 
-				episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
-				isNewer := season > target.LatestSeen.Season || (season == target.LatestSeen.Season && episode > target.LatestSeen.Episode)
-
-				if isNewer {
-					fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
-					fmt.Println(item.Link)
-
-					foundNewEpisode = true
-				} // else {
-				// 	fmt.Println("[SKIP]", episodeTag, item.Title)
-				// }
+				if !foundThisPass {
+					break
+				}
 			}
+
 		}
 
 	}
+}
+
+func (t *Target) saveProgress(targets []Target) error {
+	updateJson, err := json.MarshalIndent(targets, "", " ")
+	if err != nil {
+		panic(err)
+	}
+
+	return os.WriteFile("config.json", updateJson, 0644)
+
 }
 
 func loadTargets(filename string) ([]Target, error) {

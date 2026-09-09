@@ -1,18 +1,23 @@
 [
-  {
-    "title": "rezero",
-    "uploaders": ["FBI", "ToonsHub"],
-    "latest_seen": {
-      "season": 4,
-      "episode": 10
-    }
-  },
-  {
-    "title": "mushoku tensei",
-    "uploaders": ["Feibanyama"],
-    "latest_seen": {
-      "season": 3,
-      "episode": 10
-    }
+ {
+  "title": "rezero",
+  "uploaders": [
+   "FBI",
+   "ToonsHub"
+  ],
+  "latest_seen": {
+   "season": 4,
+   "episode": 15
   }
+ },
+ {
+  "title": "mushoku tensei",
+  "uploaders": [
+   "Feibanyama"
+  ],
+  "latest_seen": {
+   "season": 3,
+   "episode": 11
+  }
+ }
 ]
