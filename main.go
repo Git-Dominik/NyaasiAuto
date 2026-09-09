@@ -93,6 +93,12 @@ func checkUpdate(configFilePath string) {
 }
 func main() {
 	configFilePath := "config.json"
+	targets, _ := loadTargets(configFilePath)
+
+	titles := make(map[string]int)
+	for _, t := range targets {
+		titles[t.Title] = t.LatestSeen.Episode + 1
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -103,7 +109,7 @@ func main() {
 
 		for range ticker.C {
 			checkUpdate(configFilePath)
-			fmt.Println("check")
+			fmt.Println("checking for", titles)
 		}
 	}()
 
