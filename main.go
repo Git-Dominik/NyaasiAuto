@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/superturkey650/go-qbittorrent/qbt"
 
@@ -27,8 +29,7 @@ type Target struct {
 
 var episodeRegex = regexp.MustCompile(`(?i)(?:S(\d{1,2}))?\s*(?:E|Episode|\s+-\s+)\s*(\d{2,3})`)
 
-func main() {
-	configFilePath := "config.json"
+func checkUpdate(configFilePath string) {
 	targets, err := loadTargets(configFilePath)
 	if err != nil {
 		fmt.Println("Error loading config:", err)
@@ -89,6 +90,24 @@ func main() {
 		}
 
 	}
+}
+func main() {
+	configFilePath := "config.json"
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(20 * time.Millisecond)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			checkUpdate(configFilePath)
+			fmt.Println("check")
+		}
+	}()
+
+	wg.Wait()
 }
 
 func torrentLinks(torrent string) error {
