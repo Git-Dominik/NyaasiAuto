@@ -26,7 +26,8 @@ type Target struct {
 var episodeRegex = regexp.MustCompile(`(?i)(?:S(\d{1,2}))?\s*(?:E|Episode|\s+-\s+)\s*(\d{2,3})`)
 
 func main() {
-	targets, err := loadTargets("config.json")
+	configFilePath := "config.json"
+	targets, err := loadTargets(configFilePath)
 	if err != nil {
 		fmt.Println("Error loading config:", err)
 		return
@@ -63,7 +64,7 @@ func main() {
 						fmt.Println(item.Link)
 						targets[i].LatestSeen.Season = season
 						targets[i].LatestSeen.Episode = episode
-						targets[i].saveProgress(targets)
+						targets[i].saveProgress(configFilePath, targets)
 						fmt.Println(targets[i].LatestSeen)
 						foundNewEpisode = true
 						foundThisPass = true
@@ -82,18 +83,18 @@ func main() {
 	}
 }
 
-func (t *Target) saveProgress(targets []Target) error {
+func (t *Target) saveProgress(configFilePath string, targets []Target) error {
 	updateJson, err := json.MarshalIndent(targets, "", " ")
 	if err != nil {
 		panic(err)
 	}
 
-	return os.WriteFile("config.json", updateJson, 0644)
+	return os.WriteFile(configFilePath, updateJson, 0644)
 
 }
 
-func loadTargets(filename string) ([]Target, error) {
-	file, err := os.ReadFile(filename)
+func loadTargets(configFilePath string) ([]Target, error) {
+	file, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return nil, err
 	}
