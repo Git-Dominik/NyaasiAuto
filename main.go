@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/superturkey650/go-qbittorrent/qbt"
+
 	"github.com/mmcdole/gofeed"
 )
 
@@ -59,16 +61,22 @@ func main() {
 					}
 
 					if season == expectedSeason && episode == expectedEpisode {
-						episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
-						fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
-						fmt.Println(item.Link)
-						targets[i].LatestSeen.Season = season
-						targets[i].LatestSeen.Episode = episode
-						targets[i].saveProgress(configFilePath, targets)
-						fmt.Println(targets[i].LatestSeen)
-						foundNewEpisode = true
-						foundThisPass = true
-						break
+						if err := torrentLinks(item.Link); err != nil {
+							fmt.Print(err)
+						} else {
+							episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
+							fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
+							fmt.Println(item.Link)
+
+							targets[i].LatestSeen.Season = season
+							targets[i].LatestSeen.Episode = episode
+							targets[i].saveProgress(configFilePath, targets)
+							fmt.Println(targets[i].LatestSeen)
+							foundNewEpisode = true
+							foundThisPass = true
+							break
+						}
+
 					}
 
 				}
@@ -81,6 +89,21 @@ func main() {
 		}
 
 	}
+}
+
+func torrentLinks(torrent string) error {
+	qb := qbt.NewClient("http://localhost:8080/")
+	if err := qb.Login("admin", "your-secret-password"); err != nil {
+		return err
+	}
+
+	options := qbt.DownloadOptions{}
+
+	if err := qb.DownloadLinks([]string{torrent}, options); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *Target) saveProgress(configFilePath string, targets []Target) error {
