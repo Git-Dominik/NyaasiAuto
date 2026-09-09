@@ -101,8 +101,8 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+
+	wg.Go(func() {
 		defer wg.Done()
 		ticker := time.NewTicker(20 * time.Millisecond)
 		defer ticker.Stop()
@@ -111,7 +111,7 @@ func main() {
 			checkUpdate(configFilePath)
 			fmt.Println("checking for", titles)
 		}
-	}()
+	})
 
 	wg.Wait()
 }
