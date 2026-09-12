@@ -1,33 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/mmcdole/gofeed"
 )
-
-type Progress struct {
-	Season  int `json:"season"`
-	Episode int `json:"episode"`
-}
-
-type Target struct {
-	Title      string   `json:"title"`
-	Uploaders  []string `json:"uploaders"`
-	LatestSeen Progress `json:"latest_seen"`
-}
-
-var episodeRegex = regexp.MustCompile(`(?i)(?:S(\d{1,2}))?\s*(?:E|Episode|\s+-\s+)\s*(\d{2,3})`)
 
 func checkUpdate(configFilePath string) {
 	targets, err := loadTargets(configFilePath)
@@ -114,70 +94,4 @@ func main() {
 	})
 
 	wg.Wait()
-}
-
-func torrentLinks(torrent string) error {
-	resp, err := http.PostForm("http://localhost:8081/add-torrent", url.Values{
-		"magnet": {torrent},
-	})
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	defer resp.Body.Close()
-	return nil
-}
-
-func (t *Target) saveProgress(configFilePath string, targets []Target) error {
-	updateJson, err := json.MarshalIndent(targets, "", " ")
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	return os.WriteFile(configFilePath, updateJson, 0644)
-
-}
-
-func loadTargets(configFilePath string) ([]Target, error) {
-	file, err := os.ReadFile(configFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	var targets []Target
-
-	if err := json.Unmarshal(file, &targets); err != nil {
-		fmt.Println(err)
-	}
-
-	return targets, nil
-}
-
-func buildNyaaURL(animeTitle string, uploader string) string {
-	cleanTitle := strings.ReplaceAll(animeTitle, ":", "")
-
-	searchQuery := fmt.Sprintf("[%s] %s", uploader, cleanTitle)
-
-	baseURL := "https://nyaa.si/?page=rss&c=0_0&f=0&q="
-	return baseURL + url.QueryEscape(searchQuery)
-}
-
-func extractEpisode(title string) (int, int, bool) {
-	matches := episodeRegex.FindStringSubmatch(title)
-
-	if len(matches) < 3 {
-		return 0, 0, false
-	}
-
-	season := 1
-	if matches[1] != "" {
-		season, _ = strconv.Atoi(matches[1])
-	}
-
-	episode, err := strconv.Atoi(matches[2])
-	if err != nil {
-		return 0, 0, false
-	}
-
-	return season, episode, true
 }
