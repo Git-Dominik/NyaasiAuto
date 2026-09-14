@@ -34,26 +34,32 @@ func qBitAuth(client *http.Client) error {
 		"password": {env.Pass},
 	})
 	if err != nil {
-		fmt.Print(err)
-		return err
+		return fmt.Errorf("qBittorrent web ui connection failed (make sure web ui is running) %w", err)
 	}
 
 	fmt.Println(resp.Status)
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("qBittorrent authentication failed: check your credentials %d", resp.StatusCode)
+	}
+
 	return nil
 }
 
 func addTorrent(magnet string, client *http.Client) error {
-	addResp, err := client.PostForm("http://localhost:8080/api/v2/torrents/add", url.Values{
+	addResp, err := client.PostForm("http://localhst:8080/api/v2/torrents/add", url.Values{
 		"urls": {magnet},
 	})
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return fmt.Errorf("Failed to send add torrent request %w", err)
 	}
 
-	fmt.Println(addResp.Status)
 	defer addResp.Body.Close()
+
+	if addResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Failed to add torrent %d", addResp.StatusCode)
+	}
 	return nil
 }
 
