@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -43,7 +42,8 @@ func checkUpdate(configFilePath string) {
 
 					if season == expectedSeason && episode == expectedEpisode {
 						if err := torrentLinks(item.Link); err != nil {
-							log.Fatal(err)
+							fmt.Println("Failed to add torrent, make sure qbit-service is running")
+							continue
 						} else {
 							episodeTag := fmt.Sprintf("S%02dE%02d", season, episode)
 							fmt.Println("[NEW EPISODE]", episodeTag, item.Title)
@@ -84,7 +84,7 @@ func main() {
 
 	wg.Go(func() {
 		defer wg.Done()
-		ticker := time.NewTicker(500 * time.Millisecond)
+		ticker := time.NewTicker(5000 * time.Millisecond)
 		defer ticker.Stop()
 
 		for range ticker.C {
