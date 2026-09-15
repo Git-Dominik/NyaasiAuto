@@ -48,7 +48,7 @@ func qBitAuth(client *http.Client) error {
 }
 
 func addTorrent(magnet string, client *http.Client) error {
-	addResp, err := client.PostForm("http://localhst:8080/api/v2/torrents/add", url.Values{
+	addResp, err := client.PostForm("http://localhost:8080/api/v2/torrents/add", url.Values{
 		"urls": {magnet},
 	})
 	if err != nil {
@@ -57,7 +57,7 @@ func addTorrent(magnet string, client *http.Client) error {
 
 	defer addResp.Body.Close()
 
-	if addResp.StatusCode != http.StatusOK {
+	if addResp.StatusCode != http.StatusOK && addResp.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("Failed to add torrent %d", addResp.StatusCode)
 	}
 	return nil
