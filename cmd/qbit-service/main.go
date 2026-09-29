@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,6 +21,16 @@ func main() {
 		return
 	}
 
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := trackProgress(&client); err != nil {
+				fmt.Println("Track progress error:", err)
+			}
+		}
+	})
 	startServer(&client)
 
 }
@@ -60,6 +73,18 @@ func addTorrent(magnet string, client *http.Client) error {
 	if addResp.StatusCode != http.StatusOK && addResp.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("Failed to add torrent %d", addResp.StatusCode)
 	}
+
+	return nil
+}
+
+func trackProgress(client *http.Client) error {
+	trackResp, err := client.Get("http://localhost:8080/api/v2/torrents/info")
+	if err != nil {
+		return fmt.Errorf("Failed to get torrent information %w", err)
+	}
+
+	defer trackResp.Body.Close()
+
 	return nil
 }
 
@@ -80,6 +105,22 @@ func startServer(client *http.Client) {
 			return
 		}
 		c.String(http.StatusOK, magnet)
+	})
+
+	router.GET("/info", func(c *gin.Context) {
+		resp, err := client.Get("http://localhost:8080/api/v2/torrents/info")
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.Data(http.StatusOK, "application/json", body)
 	})
 
 	router.Run(":8081")
