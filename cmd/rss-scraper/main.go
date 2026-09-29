@@ -93,5 +93,26 @@ func main() {
 		}
 	})
 
+	wg.Go(func() {
+		defer wg.Done()
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			infoMap, err := torrentInfoMap()
+			if err != nil {
+				continue
+			}
+
+			if len(infoMap) == 0 {
+				continue
+			}
+
+			for name, progress := range infoMap {
+				fmt.Printf("%s Progress: %f\n", name, progress*100)
+			}
+		}
+	})
+
 	wg.Wait()
 }
